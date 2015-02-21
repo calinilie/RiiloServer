@@ -1,1 +1,1 @@
-this repo has been moved from bit bucket to github.
+This repo has been moved from bit bucket to github. This is no longer maintained.
