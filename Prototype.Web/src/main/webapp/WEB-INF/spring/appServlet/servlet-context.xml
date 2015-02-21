@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<context:component-scan base-package="com.prototype.*" />
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<!--BLL: Entities -->
+	<beans:bean
+		id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+	</beans:bean>
+	
+	<beans:bean id="DistanceFrom"
+		class="com.prototype.bll.entities.DistanceFromPost" scope="prototype">
+	</beans:bean>
+	
+	<beans:bean id="Device"
+		class="com.prototype.bll.entities.Device" scope="prototype">
+	</beans:bean>
+	
+	<beans:bean id="LocationHistory"
+		class="com.prototype.bll.entities.LocationHistory" scope="prototype">
+	</beans:bean>
+	
+	<beans:bean id="Post" 
+		class="com.prototype.bll.entities.Post" scope="prototype">
+	</beans:bean>
+	 
+	<beans:bean id="jobExecutor"
+		class="com.prototype.bll.jobs.JobExecutor"
+		init-method="startJob">
+		<beans:property name="factory" ref="schedulerFactory"></beans:property>
+		<beans:property name="snsClient" ref="AWS_SNSClient"></beans:property>
+		<beans:property name="notificationService" ref="NotificationService"></beans:property>
+	</beans:bean>
+	
+	<!-- Quartz -->
+	<beans:bean id="schedulerFactory" 
+		class="org.quartz.impl.StdSchedulerFactory">
+	</beans:bean>
+	
+	<!-- Quartz Jobs -->
+	<beans:bean id="replyNotificaitons_Job"
+		class="com.prototype.bll.jobs.ReplyToPost_NotificationsSender_Job">
+	</beans:bean>
+	
+	<!-- AWS -->
+	<beans:bean id="AWS_Credentials"
+		class="com.prototype.aws.AWSCredentialsImpl">
+	</beans:bean> 
+	
+	<beans:bean id="AWS_SNSClient"
+		class="com.amazonaws.services.sns.AmazonSNSClient">
+		<beans:constructor-arg name="awsCredentials" ref="AWS_Credentials"></beans:constructor-arg>	
+	</beans:bean>
+
+	<!--BLL: Services -->
+	<beans:bean id="PostService"
+		class="com.prototype.bll.dal.PostService">
+		<beans:property name="dao" ref="DAO"></beans:property>
+		<beans:property name="spDao" ref="SP_DAO"></beans:property>
+		<beans:property name="deviceService" ref="DeviceService"></beans:property>
+	</beans:bean>
+	
+	<beans:bean id="NotificationService"
+		class="com.prototype.bll.dal.NotificationService">
+		<beans:property name="dao" ref="DAO"></beans:property>	
+		<beans:property name="deviceService" ref="DeviceService"></beans:property>
+		<beans:property name="postService" ref="PostService"></beans:property>
+	</beans:bean>
+	
+	<beans:bean id="LocationHistoryService"
+		class="com.prototype.bll.dal.LocationHistoryService">
+		<beans:property name="dao" ref="DAO"></beans:property>
+	</beans:bean>
+	
+	<beans:bean id="DeviceService"
+		class="com.prototype.bll.dal.DeviceService">
+		<beans:property name="dao" ref="DAO"></beans:property>
+	</beans:bean>
+	 
+	<!--BLL: Data Access Layer -->
+	<beans:bean id="DAO"
+		class="com.prototype.bll.dal.DataAccessObject">
+		<beans:property name="jdbcTemplate" ref="jdbcTemplate" />
+	</beans:bean>
+	
+	<beans:bean id="SP_DAO"
+		class="com.prototype.bll.dal.SPDataAccessObject">
+		<beans:constructor-arg name="dataSource" ref="dataSource" />
+	</beans:bean>
+	
+	<beans:bean id="dataSource" destroy-method="close"
+	  class="org.apache.commons.dbcp.BasicDataSource">
+		<beans:property name="driverClassName" value="${jdbc.driverClassName}" />
+		<beans:property name="url" value="${jdbc.url}" />
+		<beans:property name="username" value="${jdbc.username}" />
+		<beans:property name="password" value="${jdbc.password}" />
+	    <beans:property name="initialSize" value="3"/>
+	</beans:bean>
+	
+	<beans:bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<beans:property name="location">
+			<beans:value>/WEB-INF/local_database.properties</beans:value>
+		</beans:property>
+	</beans:bean>
+	
+  	<beans:bean id="jdbcTemplate"
+     	class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
+     	<beans:constructor-arg ref="dataSource" />
+  	</beans:bean>
+  	
+</beans:beans>
